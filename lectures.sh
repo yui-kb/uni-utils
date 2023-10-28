@@ -9,7 +9,7 @@ OPTIONS=("n - New lecture/Edit today's lecture"
          "e - Edit past lecture"
          "v - View compiled lectures"
          "f - Open module folder"
-         "p - Practical")
+         "s - Snippet groups of lectures")
 
 MODULES=("toc - Theory of Computation"
          "prog - Programming Paradigms"
@@ -22,44 +22,41 @@ MODULES=("toc - Theory of Computation"
 
 option=$(printf '%s\n' "${OPTIONS[@]}" | fzf --preview 'echo {}' --preview-window=up:2:wrap)
 
+module=$(printf '%s\n' "${MODULES[@]}" | fzf --preview 'echo {}' --preview-window=up:2:wrap)
+choice="${module%% *}"
+
+cd $parent_dir$choice
+
 case $option in
-         "n - New lecture/Edit today's lecture")
+"n - New lecture/Edit today's lecture")
+        # check if today's lecture exists yet before creating
+        if [[ ! -f ./lectures/$date.tex ]] then
+                cp $template $lect_file
+                echo "\subfile{lectures/$date}" >> main.tex
 
-module=$(printf '%s\n' "${MODULES[@]}" | fzf --preview 'echo {}' --preview-window=up:2:wrap)
-
-choice="${module%% *}"
-cd $parent_dir$choice
-
-if [[ ! -f ./lectures/$date.tex ]] then
-        cp $template $lect_file
-echo "\subfile{lectures/$date}" >> main.tex
-
-lc=$(wc -l < ./main.tex)
-linea=$lc-1
-lineb=$lc
-{
-    printf '%dm%d\n' "$lc-1" "$lc"
-    printf '%d-m%d-\n' "$lc" "$lc-1"
-    printf '%s\n' w q
-} | ed -s main.tex
-fi
-vim ./lectures/$date.tex
-# generate a subfile in lectures/ subdirectory
-# add the subfile to the main lecture tex file
-# open the lecture subfile, ready to edit
+                # weird line swapping ed bullshit to correctly order the final 2 lines of main.tex
+                lc=$(wc -l < ./main.tex)
+                {
+                    printf '%dm%d\n' "$lc-1" "$lc"
+                    printf '%d-m%d-\n' "$lc" "$lc-1"
+                    printf '%s\n' w q
+                } | ed -s main.tex
+        fi
+        vim ./lectures/$date.tex
 ;;
+
 "f - Open module folder")
-module=$(printf '%s\n' "${MODULES[@]}" | fzf --preview 'echo {}' --preview-window=up:2:wrap)
-choice="${module%% *}"
-cd $parent_dir$choice
 ;;
+
 "e - Edit past lecture")
-module=$(printf '%s\n' "${MODULES[@]}" | fzf --preview 'echo {}' --preview-window=up:2:wrap)
-choice="${module%% *}"
-cd $parent_dir$choice/lectures
-lecture=$(find * | fzf --preview 'echo {}' --preview-window=up:2:wrap --tac --no-sort)
-vim ./$lecture
+        cd "./lectures"
+        lecture=$(find * | fzf --preview 'echo {}' --preview-window=up:2:wrap --tac --no-sort)
+        vim ./$lecture
 ;;
+
+"s - Snippet groups of lectures")
+;;
+
 *)
         exit
 esac
